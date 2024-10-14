@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>تسجيل حساب جديد</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .username-input {
+            margin-bottom: 15px;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            text-align: center;
+            width: 100%;
+            background-color: #f7f7f7;
+        }
+
+        .username-input:focus {
+            border-color: #0072ff;
+            outline: none;
+        }
+
+        .submit-button {
+            background-color: #0072ff;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 20px;
+        }
+
+        .submit-button:hover {
+            background-color: #005bb5;
+        }
+
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<!-- واجهة تسجيل الدخول -->
+<div class="container">
+    <h2>إنشاء حساب</h2>
+    <input type="text" id="usernameInput" class="username-input" placeholder="أدخل اسم المستخدم">
+    <input type="email" id="emailInput" class="username-input" placeholder="أدخل البريد الإلكتروني">
+    <input type="password" id="passwordInput" class="username-input" placeholder="أدخل كلمة المرور">
+    <button class="submit-button" id="submit">إنشاء حساب</button>
+    <div class="message" id="message"></div>
+</div>
+
+<!-- Firebase Integration -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBfGV0d4rXbwEUTtk5CRVIWMWTkixwt7_0",
+    authDomain: "this-is-a-referral.firebaseapp.com",
+    databaseURL: "https://this-is-a-referral-default-rtdb.firebaseio.com",
+    projectId: "this-is-a-referral",
+    storageBucket: "this-is-a-referral.appspot.com",
+    messagingSenderId: "755422423785",
+    appId: "1:755422423785:web:5e85a37d5d4e68ed1d9e78",
+    measurementId: "G-4LR763ZZHE"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+
+  // التحقق عند تحميل الصفحة
+  window.addEventListener('load', function() {
+      const storedUsername = localStorage.getItem('username');
+      if (storedUsername) {
+          // إذا كان اسم المستخدم موجودًا، قم بتوجيه المستخدم إلى صفحة العداد
+          window.location.href = "counter.html";
+      }
+  });
+
+  // الحصول على العناصر
+  const submitButton = document.getElementById('submit');
+  const message = document.getElementById('message');
+
+  // وظيفة التحقق من صحة الحقول
+  function isValidInput() {
+      const username = document.getElementById('usernameInput').value;
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+
+      if (username === "" || email === "" || password === "") {
+          message.textContent = "جميع الحقول مطلوبة!";
+          message.classList.add('error');
+          return false;
+      }
+
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email)) {
+          message.textContent = "البريد الإلكتروني غير صالح!";
+          message.classList.add('error');
+          return false;
+      }
+
+      message.classList.remove('error');
+      return true;
+  }
+
+  // عند الضغط على زر إنشاء حساب
+  submitButton.addEventListener('click', function() {
+      if (isValidInput()) {
+          const username = document.getElementById('usernameInput').value;
+          const email = document.getElementById('emailInput').value;
+          const password = document.getElementById('passwordInput').value;
+
+          // حفظ البيانات في قاعدة بيانات Firebase
+          set(ref(database, 'users/' + username), {
+              username: username,
+              email: email,
+              password: password
+          }).then(() => {
+              // حفظ بيانات المستخدم محليًا لاسترجاعها لاحقًا
+              localStorage.setItem('username', username);
+              // الانتقال إلى صفحة العداد بعد التسجيل
+              window.location.href = "counter.html";
+          }).catch((error) => {
+              message.textContent = "حدث خطأ أثناء إنشاء الحساب: " + error.message;
+              message.classList.add('error');
+          });
+      }
+  });
+</script>
+
+</body>
+</html>

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -42,6 +41,11 @@
             margin-bottom: 20px;
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
         }
 
         .countdown-button {
@@ -55,7 +59,7 @@
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            margin-bottom: 20px; /* لإضافة مساحة قبل الشريط الإخباري */
+            margin-bottom: 20px;
         }
 
         .countdown-button:hover {
@@ -82,6 +86,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 50%; /* لجعل الصورة دائرية */
         }
 
         /* الشريط الإخباري */
@@ -121,10 +126,10 @@
 </button>
 
 <div class="points-box">
-    نقاط متحصلة: <span id="points">0</span>
+    نقاط متحصلة: <span id="points">600</span> <!-- تم تعيين القيمة المبدئية إلى 600 -->
 </div>
 
-<div class="circle" id="rainContainer"></div>
+<div class="circle" id="countdownCircle"></div>
 
 <button class="countdown-button" id="countdownButton">تشغيل</button>
 
@@ -135,7 +140,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+    import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBfGV0d4rXbwEUTtk5CRVIWMWTkixwt7_0",
@@ -151,80 +156,64 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
     
-    // تأكد من الحصول على اسم المستخدم
-    const username = localStorage.getItem('username');
-    if (!username) {
-        console.error('No username found in localStorage!');
-        alert('لم يتم العثور على اسم المستخدم. الرجاء التحقق من أنه مخزن في localStorage.');
-    } else {
-        console.log('Username from localStorage:', username);
-    }
-
-    const pointsBox = document.getElementById('points');
-
-    let points = 0;
-    let timeLeft = 86400; // 24 ساعة
-    let startTime = null;
-    let countdownActive = false;
-
     const countdownButton = document.getElementById('countdownButton');
-    const rainContainer = document.getElementById('rainContainer');
+    const pointsBox = document.getElementById('points');
+    let points = 600; // تم تعيين النقاط المبدئية إلى 600
+    let countdownActive = false;
+    let startTime = null;
+    const savedUsername = localStorage.getItem('username');
 
-    // تحقق من وجود بيانات المستخدم في Firebase
-    const userRef = ref(database, `users/${username}`);
-    console.log('Database reference path:', userRef);
+    // جلب النقاط والوقت المتبقي من قاعدة البيانات عند تحميل الصفحة
+    if (savedUsername) {
+        const userRef = ref(database, `users/${savedUsername}`);
+        get(userRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                points = data.points || 600; // تعيين النقاط إلى 600 إذا لم توجد في قاعدة البيانات
+                pointsBox.textContent = points;
 
-    // جلب البيانات عند تحميل الصفحة
-    get(userRef).then((snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('Fetched data:', data);
-
-            points = data.points || 0;
-            startTime = data.startTime || null;
-
-            // عرض النقاط المجمعة
-            pointsBox.textContent = points;
-
-            if (startTime) {
-                const currentTime = Math.floor(Date.now() / 1000);
-                const elapsedTime = currentTime - startTime;
-                timeLeft = Math.max(86400 - elapsedTime, 0);
-
-                updateCountdownDisplay(timeLeft);
-                if (timeLeft > 0) {
-                    countdownButton.disabled = true; // تعطيل الزر إذا كان العد مستمر
-                    countdownActive = true;
-                    startCountdown(); // استئناف العد التنازلي
-                } else {
-                    countdownButton.disabled = false;
+                startTime = data.startTime || null;
+                if (startTime) {
+                    const currentTime = Math.floor(Date.now() / 1000);
+                    const elapsedTime = currentTime - startTime;
+                    const timeLeft = Math.max(86400 - elapsedTime, 0);
+                    if (timeLeft > 0) {
+                        countdownActive = true;
+                        startCountdown(timeLeft);
+                    } else {
+                        countdownButton.disabled = false;
+                    }
                 }
             } else {
-                pointsBox.textContent = points;  // عرض النقاط في الصندوق
+                console.log("No data found for this user.");
             }
-        } else {
-            console.log("No data available for this user.");
-        }
-    }).catch((error) => {
-        console.error("Error fetching data:", error.message);
-        alert('حدث خطأ أثناء جلب البيانات من قاعدة البيانات.');
-    });
+        }).catch((error) => {
+            console.error("Error fetching data:", error);
+        });
+    }
 
-    countdownButton.addEventListener('click', function() {
-        if (countdownActive) return;  // منع إعادة البدء إذا كان العد مستمر
+    countdownButton.addEventListener('click', () => {
+        if (!savedUsername) {
+            return; // تأكد من أن المستخدم قام بتسجيل الدخول
+        }
+
+        if (countdownActive) return; // إذا كان العد التنازلي نشطًا، لا تفعل شيئًا
+
         countdownButton.disabled = true;
         countdownActive = true;
         startTime = Math.floor(Date.now() / 1000);
-        set(ref(database, `users/${username}/startTime`), startTime);
 
-        startCountdown();
+        const userRef = ref(database, `users/${savedUsername}`);
+        update(userRef, {
+            startTime: startTime
+        });
+
+        startCountdown(86400); // بدء العد التنازلي لمدّة 24 ساعة
     });
 
-    function startCountdown() {
-        const countdownInterval = setInterval(function() {
-            const currentTime = Math.floor(Date.now() / 1000);
-            timeLeft = Math.max(86400 - (currentTime - startTime), 0);
-
+    function startCountdown(timeLeft) {
+        const countdownInterval = setInterval(() => {
+            timeLeft -= 1;
             updateCountdownDisplay(timeLeft);
 
             if (timeLeft <= 0) {
@@ -236,31 +225,26 @@
                 points += 100;
                 pointsBox.textContent = points;
 
-                set(ref(database, `users/${username}/points`), points)
-                    .then(() => {
-                        console.log("Points saved successfully.");
-                    })
-                    .catch((error) => {
-                        console.error("Error saving points:", error);
-                    });
-
-                set(ref(database, `users/${username}/startTime`), null);
+                const userRef = ref(database, `users/${savedUsername}`);
+                update(userRef, {
+                    points: points,
+                    startTime: null
+                });
             }
-        }, 1000);
+        }, 1000); // تحديث كل ثانية
     }
 
-    function updateCountdownDisplay(seconds) {
-        const hours = Math.floor(seconds / 3600).toString().padStart(2, '0');
-        const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-        const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
-        countdownButton.textContent = `${hours}:${minutes}:${remainingSeconds}`;
+    function updateCountdownDisplay(timeLeft) {
+        const hours = Math.floor(timeLeft / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0');
+        const seconds = (timeLeft % 60).toString().padStart(2, '0');
+        countdownButton.textContent = `${hours}:${minutes}:${seconds}`; // عرض الوقت المتبقي داخل الزر
     }
 
-    // الانتقال إلى صفحة البروفايل عند الضغط على زر البروفايل
-    document.getElementById('profileButton').addEventListener('click', function() {
+    // عند الضغط على زر الملف الشخصي، يتم الانتقال إلى صفحة الملف الشخصي
+    document.getElementById('profileButton').addEventListener('click', () => {
         window.location.href = 'user.html'; // الانتقال إلى صفحة البروفايل
     });
-
 </script>
 
 </body>

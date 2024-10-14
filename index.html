@@ -88,18 +88,18 @@
 <!-- Firebase Integration -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
   // Firebase configuration
   const firebaseConfig = {
-    apiKey: "AIzaSyBfGV0d4rXbwEUTtk5CRVIWMWTkixwt7_0",
+    apiKey: "YOUR_API_KEY",
     authDomain: "this-is-a-referral.firebaseapp.com",
-    databaseURL: "https://this-is-a-referral-default-rtdb.firebaseio.com",
+    databaseURL: "https://this-is-a-referral-default-rtdb.firebaseio.com",  // هنا العنوان الصحيح
     projectId: "this-is-a-referral",
     storageBucket: "this-is-a-referral.appspot.com",
-    messagingSenderId: "755422423785",
-    appId: "1:755422423785:web:5e85a37d5d4e68ed1d9e78",
-    measurementId: "G-4LR763ZZHE"
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    measurementId: "YOUR_MEASUREMENT_ID"
   };
 
   // Initialize Firebase
@@ -149,20 +149,29 @@
           const email = document.getElementById('emailInput').value;
           const password = document.getElementById('passwordInput').value;
 
-          // حفظ البيانات في قاعدة بيانات Firebase
-          set(ref(database, 'users/' + username), {
-              username: username,
-              email: email,
-              password: password
-          }).then(() => {
-              // حفظ بيانات المستخدم محليًا لاسترجاعها لاحقًا
-              localStorage.setItem('username', username);
-              // الانتقال إلى صفحة العداد بعد التسجيل
-              window.location.href = "counter.html";
-          }).catch((error) => {
-              message.textContent = "حدث خطأ أثناء إنشاء الحساب: " + error.message;
+          // تحقق من وجود اسم المستخدم في localStorage
+          const storedUsername = localStorage.getItem('username');
+          if (!storedUsername) {
+              // حفظ البيانات في قاعدة بيانات Firebase
+              set(ref(database, 'users/' + username), {
+                  username: username,
+                  email: email,
+                  password: password,
+                  points: 0, // تهيئة النقاط
+                  timer: 86400 // تهيئة الوقت بـ 24 ساعة
+              }).then(() => {
+                  // حفظ بيانات المستخدم محليًا لاسترجاعها لاحقًا
+                  localStorage.setItem('username', username);
+                  // الانتقال إلى صفحة العداد بعد التسجيل
+                  window.location.href = "counter.html";
+              }).catch((error) => {
+                  message.textContent = "حدث خطأ أثناء إنشاء الحساب: " + error.message;
+                  message.classList.add('error');
+              });
+          } else {
+              message.textContent = "اسم المستخدم موجود بالفعل!";
               message.classList.add('error');
-          });
+          }
       }
   });
 </script>
